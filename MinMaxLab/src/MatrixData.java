@@ -1,3 +1,5 @@
+//Written by Jacob Fakult August 30, 2016
+
 import java.util.ArrayList;
 
 public class MatrixData
