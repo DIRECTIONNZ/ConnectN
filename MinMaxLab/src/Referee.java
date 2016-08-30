@@ -14,8 +14,8 @@ public class Referee
 	static int boardColumns = 7; // columns the board has
 	static int winNumber = 4; // how many pieces you need in a row to win
 	static int timeLimit = 10; // the time, in seconds, allowed for each player to provide a move
-	static Player player1 = new SimplePlayer("Beep", 1, timeLimit); // you should create your own player class and use it here
-	static Player player2 = new SimplePlayer("Boop", 2, timeLimit);
+	static Player player1 = new SimplePlayer("Nan", 1, timeLimit); // you should create your own player class and use it here
+	static Player player2 = new SimplePlayer("Jacob", 2, timeLimit);
 	// STOP CHANGING THINGS
 	static StateTree board;
 	
