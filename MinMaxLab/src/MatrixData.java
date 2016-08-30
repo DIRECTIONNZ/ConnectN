@@ -1,44 +1,23 @@
 //Written by Jacob Fakult August 30, 2016
+//This is definitely still buggy. But it should work for the most part. I'll clean it up soon!
 
 import java.util.ArrayList;
 
 public class MatrixData
 {
+	//Directions that sequences could be pointing in. Always point up and right (except left for left_diagonal)
 	public final int HORIZONTAL = 0;
 	public final int LEFT_DIAGONAL = 1;
 	public final int VERTICAL = 2;
 	public final int RIGHT_DIAGONAL = 3;
 	
-	public class InARow
-	{
-		public int row;
-		public int col;
-		public int dir;
-		public int length;
-		
-		public InARow(int r, int c, int d, int l) //row, column, direction
-		{
-			row = r;
-			col = c;
-			dir = d;
-			length = l;
-		}
-	}
-	
+	//Keeping this public for now. Can change if we want
 	public ArrayList<ArrayList<InARow>> sequences;
 	
+	//Call this exclusively to create a MatrixData, then call getMatrixData()
 	public MatrixData() //ones, twos, threes
 	{
 		sequences = new ArrayList<ArrayList<InARow>>();
-	}
-	
-	public void addData(ArrayList<InARow> seq)
-	{
-		for (InARow s : seq)
-		{
-			int length = s.length;
-			if (s != null)  sequences.get(length).add(s); //Is this line legal (.get(index) part)?
-		}
 	}
 	
 	/*
@@ -107,14 +86,27 @@ public class MatrixData
 		
 		return data;
 	}
+	
+	//Helper function. Don't worry about it!
+	//Adds a single pieces sequence data to the sequences object
+	public void addData(ArrayList<InARow> seq)
+	{
+		for (InARow s : seq)
+		{
+			int length = s.length;
+			if (s != null)  sequences.get(length).add(s); //Is this line legal (.get(index) part)?
+		}
+	}
 
-	//Array[0] is ones, array[1] is twos, array[2] is threes (because that makes total sense to a programmer)
+	//Helper function. Don't worry about it!
+	//Calls addData for a single piece on the board (and every dir for that piece) and adds it to the sequences object
+	//Array[0] is ones, array[1] is twos, array[2] is threes etc (because that makes total sense to a programmer)
 	private ArrayList<InARow> getSequences(StateTree tree, int row, int col)
 	{
 		ArrayList<InARow> sequences = new ArrayList<InARow>();
 		boolean isNode = true; //set to false if there is any sequence involving this node
 		
-		for (int dir=0; dir<4; dir++)
+		for (int dir=0; dir<4; dir++) //Check every direction
 		{
 			if (dir == HORIZONTAL)
 			{
@@ -162,6 +154,8 @@ public class MatrixData
 		return sequences;
 	}
 
+	//Helper function. Don't worry about it!
+	//Returns the length of a sequence at a single chip, in a single direction
 	private int seqLength(StateTree tree, int row, int col, int rowAdd, int colAdd)
 	{
 		int count = 0;
@@ -182,5 +176,15 @@ public class MatrixData
 		}
 		
 		return count;
+	}
+	
+	//Used for printing things nicely
+	public String dirToString(int dir)
+	{
+		if (dir == VERTICAL) return "VERTICAL";
+		else if (dir == HORIZONTAL) return "HORIZONTAL";
+		else if (dir == LEFT_DIAGONAL) return "LEFT_DIAGONAL";
+		else if (dir == RIGHT_DIAGONAL) return "RIGHT_DIAGONAL";
+		else return "UNKNOWN DIRECTION";
 	}
 }
