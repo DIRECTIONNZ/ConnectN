@@ -4,3 +4,8 @@
 /RefereeBoard.class
 /SimplePlayer.class
 /StateTree.class
+/MatrixData.class
+/AIPlayer.class
+/MatrixData$InARow.class
+/DataHandler.class
+/InARow.class
