@@ -43,6 +43,7 @@ public class AIPlayer extends Player
 		
 		int depth = 0;
 		ArrayList<Integer> heuristics = minimax(state, 0, depth, timeLimit, startTime); //Only searches to depth 1 right now
+		heuristics = minimax(state, 0, 3, timeLimit, startTime); //Only searches to depth 1 right now
 		/*while (System.currentTimeMillis() - startTime < timeLimit && false)
 		{
 			ArrayList<Integer> heuristics = minimax(state, 0, depth, timeLimit, startTime); //Only searches to depth 1 right now
@@ -105,7 +106,14 @@ public class AIPlayer extends Player
 			else
 			{
 				branchValues = minimax_wrapper(state, timeLimit / 1000); //change 3rd param soon. Need variable for defensedepth
+				
 				pruneBadGuesses(branchValues, .5);
+				int index1 = 0;
+				for (Integer i : branchValues)
+				{
+					System.out.println("Prune Index " + index1 + ": " + i);
+					index1++;
+				}
 				
 				for (int i=0; i<branchValues.size(); i++)
 				{
@@ -151,7 +159,7 @@ public class AIPlayer extends Player
 		
 		return sum;*/
 		Random r = new Random();
-		return r.nextInt();
+		return Math.abs(r.nextInt() % 100);
 	}
 	
 	//Undoes the last move made so we can recurse back up the minimax tree 
