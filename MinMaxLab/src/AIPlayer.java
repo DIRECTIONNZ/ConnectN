@@ -16,25 +16,13 @@ public class AIPlayer extends Player
 	{
 		//MatrixData data = new MatrixData();
 		
-		Move move = minimax_wrapper(state, this.timeLimit * 1000);
-		//Random r = new Random();
-		//Move move = new Move(false, r.nextInt() & 7);
-		/*for (int i=0; i<state.boardMatrix.length; i++)
+		ArrayList<Integer> heuristics = minimax_wrapper(state, this.timeLimit * 1000);
+		int index1 = 0;
+		for (Integer i : heuristics)
 		{
-			for (int j=0; j<state.boardMatrix[i].length; j++)
-			{
-				System.out.print(state.boardMatrix[i][j]);
-			}
-			System.out.println("--");
-		}*/
-		return move;
-	}
-	
-	private Move minimax_wrapper(StateTree state, long timeLimit)
-	{
-		long startTime = System.currentTimeMillis();
-		
-		ArrayList<Integer> heuristics = minimax(state, 0, 0, timeLimit, startTime); //Only searches to depth 1 right now
+			System.out.println("Index " + index1 + ": " + i);
+			index1++;
+		}
 		
 		int max=0, maxIndex=0;
 		for (int index = 0; index < heuristics.size(); index++)
@@ -45,14 +33,31 @@ public class AIPlayer extends Player
 				maxIndex = index;
 			}
 		}
+		Move move = new Move(false, maxIndex);
+		return move;
+	}
+	
+	private ArrayList<Integer> minimax_wrapper(StateTree state, long timeLimit)
+	{
+		long startTime = System.currentTimeMillis();
 		
-		return new Move(false, maxIndex % 7);
+		int depth = 0;
+		ArrayList<Integer> heuristics = minimax(state, 0, depth, timeLimit, startTime); //Only searches to depth 1 right now
+		/*while (System.currentTimeMillis() - startTime < timeLimit && false)
+		{
+			ArrayList<Integer> heuristics = minimax(state, 0, depth, timeLimit, startTime); //Only searches to depth 1 right now
+			depth++;
+		}*/
+		
+		return heuristics;
+		//return new Move(false, maxIndex % state.columns);
 	}
 	
 	//DO NOT CALL DIRECTLY
 	private ArrayList<Integer> minimax(StateTree state, int depth, int maxDepth, long timeLimit, long startTime)
 	{
-		boolean userMove = ((depth+this.turn) % 2) == 1;
+		boolean userMove = ((depth+state.turn) % 2) == 1;
+		System.out.println("Usermove: " + userMove);
 		//Recursive base case. Telling us to stop DFS if we are at the iterative depth limit or if time is up
 		if (depth <= maxDepth || (System.currentTimeMillis() - startTime) > timeLimit)
 		{
@@ -99,7 +104,7 @@ public class AIPlayer extends Player
 			}
 			else
 			{
-				branchValues = minimax(state, depth+1, depth+1, timeLimit, startTime); //change 3rd param soon. Need variable for defensedepth
+				branchValues = minimax_wrapper(state, timeLimit / 1000); //change 3rd param soon. Need variable for defensedepth
 				pruneBadGuesses(branchValues, .5);
 				
 				for (int i=0; i<branchValues.size(); i++)
