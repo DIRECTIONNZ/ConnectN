@@ -48,6 +48,7 @@ public abstract class StateTree
 		}
 		if(!move.pop && boardMatrix[rows-1][move.column] != 0)
 		{
+			//System.out.println("col = " + move.column);
 			System.out.println("That column is full.");
 			return false;
 		}

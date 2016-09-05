@@ -35,18 +35,22 @@ public class MatrixData
 		return sum / i; //Definitely probably want a better metric here
 	}
 	
-	public MatrixData getMatrixData(StateTree tree, boolean isUser, int n) //n is board size
+	public MatrixData getMatrixData(StateTree tree, int currentUser, int n) //n is board size
 	{
 		//Do we want this line? I'm not really sure tbh lol. Don't think so tho
-		sequences = new ArrayList<ArrayList<InARow>>(n);
+		sequences = new ArrayList<ArrayList<InARow>>();
+		/*for (int i=0; i<n; i++)
+		{
+			sequences.add(new ArrayList<InARow>());
+		}*/
+		//System.out.println("size: " + sequences.size());
 		//ArrayList<ArrayList<InARow>> matrixSequences = new ArrayList<ArrayList<InARow>>();
 		
 		MatrixData data = new MatrixData();
 		
-		int currentUser = (isUser ? 1 : 0) + 1;
 		for (int c = 0; c<tree.columns; c++)
 		{	
-			for (int r = tree.rows - 1; r >= 0; r--)
+			for (int r = 0; r < tree.rows; r++)
 			{
 				if (tree.boardMatrix[r][c] == 0) //If column is empty, move on to the next one
 				{
@@ -56,8 +60,9 @@ public class MatrixData
 				
 				if (tree.boardMatrix[r][c] == currentUser)
 				{
+					//System.out.println("yes");
 					boolean isNewSequence = true;
-					if (r < tree.rows && c > 0) //Check one space below us to make sure we haven't added this sequence before
+					if (r > 0 && c > 0) //Check one space below us to make sure we haven't added this sequence before
 					{ 
 						for (int i=0; i<=1; i++)
 						{
@@ -83,7 +88,7 @@ public class MatrixData
 				}
 			}
 		}
-		
+		//System.out.println(data.sequences.size() + "");
 		return data;
 	}
 	
@@ -120,6 +125,7 @@ public class MatrixData
 			else if (dir == LEFT_DIAGONAL)
 			{
 				int length = seqLength(tree, row, col, -1, -1);
+				System.out.println("hi1");
 				if (length > 1)
 				{
 					isNode = false;
@@ -129,6 +135,7 @@ public class MatrixData
 			else if (dir == VERTICAL)
 			{
 				int length = seqLength(tree, row, col, -1, 0);
+				System.out.println("hi2");
 				if (length > 1)
 				{
 					isNode = false;
@@ -138,16 +145,16 @@ public class MatrixData
 			else if (dir == RIGHT_DIAGONAL)
 			{
 				int length = seqLength(tree, row, col, -1, 1);
+				System.out.println("hi3");
 				if (length > 1)
 				{
-					isNode = true;
+					isNode = false;
 					sequences.add(new InARow(row, col, dir, length));
 				}
 			}
 			if (isNode)
 			{
 				sequences.add(new InARow(row, col, -1, 1));
-				
 			}
 		}
 		
@@ -160,10 +167,19 @@ public class MatrixData
 	{
 		int count = 0;
 		int user = tree.boardMatrix[row][col];
-		for (int r = row; r>=0; r+=rowAdd)
+		for (int r = row; r < tree.rows; r+=rowAdd)
 		{
 			for (int c = col; c<tree.columns; c+=colAdd)
 			{
+				if (colAdd < 0 && c == 0)
+				{
+					return count;
+				}
+				if (rowAdd < 0 && row == 0)
+				{
+					return count;
+				}
+				//System.out.println(r + " " + c);
 				if (tree.boardMatrix[r][c] == user)
 				{
 					count++;
