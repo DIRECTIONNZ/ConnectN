@@ -2,10 +2,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 import java.lang.Math;
-//import java.util.Stack;
+import java.util.Stack;
 
 public class AIPlayer extends Player
 {
+	
+	private int BRANCHING_FACTOR = 14;
 	public AIPlayer(String n, int t, int l)
 	{
 		super(n, t, l);
@@ -16,13 +18,16 @@ public class AIPlayer extends Player
 	{
 		//MatrixData data = new MatrixData();
 		
-		ArrayList<Integer> heuristics = minimax_wrapper(state, this.timeLimit * 1000);
-		int index1 = 0;
-		for (Integer i : heuristics)
+		Move move = minimax_wrapper(state, this.timeLimit * 1000);
+		if (move == null)
 		{
-			System.out.println("Index " + index1 + ": " + i);
-			index1++;
+			System.out.println("MOVE WAS NULL ERROR!");
+			return new Move(false, 0);
 		}
+		
+		return move;
+		
+		/*int index1 = 0;
 		
 		int max=0, maxIndex=0;
 		for (int index = 0; index < heuristics.size(); index++)
@@ -34,136 +39,212 @@ public class AIPlayer extends Player
 			}
 		}
 		Move move = new Move(false, maxIndex);
-		return move;
+		return move;*/
 	}
 	
-	private ArrayList<Integer> minimax_wrapper(StateTree state, long timeLimit)
+	private Move minimax_wrapper(StateTree state, long timeLimit)
 	{
 		long startTime = System.currentTimeMillis();
 		
 		int depth = 0;
-		ArrayList<Integer> heuristics = minimax(state, 0, depth, timeLimit, startTime); //Only searches to depth 1 right now
-		heuristics = minimax(state, 0, 3, timeLimit, startTime); //Only searches to depth 1 right now
-		/*while (System.currentTimeMillis() - startTime < timeLimit && false)
+		Move move = null;
+		while (System.currentTimeMillis() - startTime < timeLimit /*REMOVE THIS*/ && depth < 2)
 		{
-			ArrayList<Integer> heuristics = minimax(state, 0, depth, timeLimit, startTime); //Only searches to depth 1 right now
+			move = minimax(state, depth, timeLimit, startTime);
 			depth++;
-		}*/
+		}
 		
-		return heuristics;
+		return move;
 		//return new Move(false, maxIndex % state.columns);
 	}
 	
 	//DO NOT CALL DIRECTLY
-	private ArrayList<Integer> minimax(StateTree state, int depth, int maxDepth, long timeLimit, long startTime)
-	{
-		boolean userMove = ((depth+state.turn) % 2) == 1;
-		System.out.println("Usermove: " + userMove);
-		//Recursive base case. Telling us to stop DFS if we are at the iterative depth limit or if time is up
-		if (depth <= maxDepth || (System.currentTimeMillis() - startTime) > timeLimit)
+	private Move minimax(StateTree state, int maxDepth, long timeLimit, long startTime)
+	{	
+		ArrayList<StateTree> states = new ArrayList<StateTree>((int)Math.pow(BRANCHING_FACTOR, maxDepth));
+		ArrayList<ArrayList<Move>> moves = generateMoves(maxDepth);
+		
+		StateTree s;
+		for (ArrayList<Move> move : moves)
 		{
-			ArrayList<Integer> values = new ArrayList<Integer>(state.columns);
-			
-			//Return all child node values of this state tree
-			for (int choice = 0; choice < state.columns; choice++)
+			s = new RefereeBoard(state.rows, state.columns, state.winNumber, 1, false, false, null);
+			s.boardMatrix = new int[state.rows][state.columns];
+			for (int r=0; r<state.rows; r++)
 			{
-				Move move = new Move(false, choice);
-				state.makeMove(move);
-				if (userMove)
+				for (int c=0; c<state.columns; c++)
 				{
-					values.add(getHeuristic(state));
+					s.boardMatrix[r][c] = state.boardMatrix[r][c];
+				}
+			}
+			s.turn = state.turn;
+			s.pop1 = state.pop1;
+			s.pop2 = state.pop2;
+			
+			states.add(s);
+			for (Move m : move)
+			{
+				s.makeMove(m);
+			}
+			
+			states.add(s);
+		}
+		
+		boolean maxNotMin = (maxDepth % 2) == 1;
+		int statesRemaining = states.size();
+		int lastTargetIndex = -1;
+		int depth = maxDepth;
+		
+		while (statesRemaining > 1)
+		{
+			for (int stateIndex=0; stateIndex<statesRemaining; stateIndex+=BRANCHING_FACTOR)
+			{
+				int targetValue = 0;
+				int targetIndex = 0;
+				
+				if (maxNotMin)
+				{
+					targetValue = getHeuristic(states.get(0));
+					for (int choice = 1; choice < BRANCHING_FACTOR; choice++)
+					{
+						int column = (int)(stateIndex / Math.pow(BRANCHING_FACTOR, depth-1));
+						if (choice >= BRANCHING_FACTOR /2)
+						{
+							if (state.boardMatrix[0][column] != this.turn)
+							{
+								//System.out.println("Cant pop" + this.turn + boardMatrix[0][column]);
+								continue;
+							}
+						}
+						else
+						{
+							if (state.boardMatrix[state.rows-1][column] == this.turn)
+							{
+								System.out.println("column: " + column);
+								continue;
+							}
+						}
+						s = states.get(stateIndex + choice);
+						int value = getHeuristic(s);
+						if (value > targetValue)
+						{
+							targetValue = value;
+							targetIndex = stateIndex + choice;
+						}
+					}
+					lastTargetIndex = targetIndex;
 				}
 				else
 				{
-					values.add(getHeuristic(state));
-				}
-				undoMove(state, move);
-			}
-			
-			return values;
-		}
-		
-		//values of child nodes
-		ArrayList<Integer> values = new ArrayList<Integer>();
-		
-		//values of child's child nodes (the max(branchValues) will be put into values each loop)
-		ArrayList<Integer> branchValues = new ArrayList<Integer>();
-		
-		//In this loop we iterate over each of the columns and check the minimax value for that tree
-		for (int choice = 0; choice < state.columns; choice++)
-		{
-			//Prepare to make a move and put it into the column $choice
-			Move move = new Move(false, choice);
-			state.makeMove(move);
-			
-			//make the move, check the minimax, then undo the move
-			//If this level on the tree is our move just check the regular tree
-			//If it is their move then we will use our multiple heuristic pruning algorithm
-			if (userMove)
-			{
-				branchValues = minimax(state, depth+1, maxDepth, timeLimit, startTime); //Get values of this new state trees children
-			}
-			else
-			{
-				branchValues = minimax_wrapper(state, timeLimit / 1000); //change 3rd param soon. Need variable for defensedepth
-				
-				pruneBadGuesses(branchValues, .5);
-				int index1 = 0;
-				for (Integer i : branchValues)
-				{
-					System.out.println("Prune Index " + index1 + ": " + i);
-					index1++;
-				}
-				
-				for (int i=0; i<branchValues.size(); i++)
-				{
-					if (branchValues.get(i) > Integer.MIN_VALUE)
+					targetValue = getHeuristic(states.get(0));
+					for (int choice = 1; choice < BRANCHING_FACTOR; choice++)
 					{
-						Move move2 = new Move(false, i);
-						state.makeMove(move2);
-						branchValues = minimax(state, depth+1, maxDepth, timeLimit, startTime); //Get values of this new state trees children
-						undoMove(state, move2);
+						int column = (int)(stateIndex / Math.pow(BRANCHING_FACTOR, depth-1));
+						if (choice >= BRANCHING_FACTOR /2)
+						{
+							if (state.boardMatrix[0][column] != this.turn)
+							{
+								//System.out.println("Cant pop" + this.turn + boardMatrix[0][column]);
+								continue;
+							}
+						}
+						else
+						{
+							if (state.boardMatrix[state.rows-1][column] == this.turn)
+							{
+								System.out.println("column: " + column);
+								continue;
+							}
+						}
+						
+						s = states.get(stateIndex + choice);
+						int value = getHeuristic(s);
+						if (value < targetValue)
+						{
+							targetValue = value;
+							targetIndex = stateIndex + choice;
+						}
 					}
 				}
+				
+				maxNotMin = !maxNotMin;
+				depth--;
+				
+				states.set(stateIndex / BRANCHING_FACTOR, states.get(stateIndex));
+				statesRemaining /= BRANCHING_FACTOR;
 			}
-			undoMove(state, move);
-			
-			//Get the max value of all these branch nodes
-			int max = 0;
-			for (int b : branchValues)
-			{
-				if (b > max)
-				{
-					max = b;
-				}
-			}
-			
-			values.add(max);
 		}
 		
-		return values;
+		Move move = new Move(lastTargetIndex >= (BRANCHING_FACTOR/2), lastTargetIndex % (BRANCHING_FACTOR / 2));
+		
+		return move;
+	}
+	
+	private ArrayList<ArrayList<Move>> generateMoves(int maxDepth)
+	{
+		ArrayList<ArrayList<Move>> moves = new ArrayList<ArrayList<Move>>();
+		ArrayList<String> substrings = new ArrayList<String>();
+		for (int i=0; i<BRANCHING_FACTOR; i++)
+		{
+			substrings.add("" + (char)(i + 97));
+		}
+		
+		ArrayList<String> combinations = generateCombinations(maxDepth, substrings);
+		for (String s : combinations)
+		{
+			int index = 0;
+			moves.add(new ArrayList<Move>());
+			for (int c = 0; c<s.length(); c++)
+			{
+				int value = (int)s.charAt(c) - 97;
+				moves.get(index).add(new Move((value < 7), value % 7));
+			}
+			index++;
+		}
+		
+		return moves;
+	}
+	
+	private ArrayList<String> generateCombinations(int depth, ArrayList<String> possibleValues)
+	{
+	    int carry;
+	    ArrayList<String> combinations = new ArrayList<String>();
+	    
+	    int[] indices = new int[depth];
+	    do
+	    {
+	        for(int index : indices)
+	        	combinations.add(possibleValues.get(index));
+	            //System.out.print(possibleValues.get(index) + " ");
+
+	        carry = 1;
+	        for(int i = indices.length - 1; i >= 0; i--)
+	        {
+	            if(carry == 0)
+	                break;
+
+	            indices[i] += carry;
+	            carry = 0;
+
+	            if(indices[i] == possibleValues.size())
+	            {
+	                carry = 1;
+	                indices[i] = 0;
+	            }
+	        }
+	    }
+	    while(carry != 1); // Call this method iteratively until a carry is left over
+	    
+	    return combinations;
 	}
 	
 	private int getHeuristic(StateTree state)
 	{
-		/*MatrixData data = new MatrixData();
-		data.getMatrixData(state, this.turn, 0);
-		
-		int sum = 0;
-		int index = 1;
-		for (ArrayList<InARow> d : data.sequences)
-		{
-			System.out.println("index " + index + " " + d.size());
-			sum += d.size() * index;
-		}
-		
-		return sum;*/
 		Random r = new Random();
-		return Math.abs(r.nextInt() % 100);
+		return Math.abs((r.nextInt() * 100) % 100);
 	}
 	
 	//Undoes the last move made so we can recurse back up the minimax tree 
-	private void undoMove(StateTree state, Move move)
+	/*private void undoMove(StateTree state, Move move)
 	{
 		if(move.pop)
 		{
@@ -191,127 +272,7 @@ public class AIPlayer extends Player
 				}
 			}
 		}
-	}
-	
-	public int heuristic(StateTree state){
-		int utility = 0;
-		int winNumber = state.winNumber;
-		
-		//assign weight
-		int[] verticalWeight = new int[winNumber];
-		for (int i = 0; i < verticalWeight.length; i++){
-			if (i == (verticalWeight.length - 1)){
-				verticalWeight[i] = Integer.MAX_VALUE;
-			}
-			else{
-				verticalWeight[i] = 2 * (i + 1);
-			}
-		}
-		
-		int[] horizontalOneFree = new int[winNumber];
-		for (int i = 0; i < horizontalOneFree.length; i++){
-			if (i == (horizontalOneFree.length - 1)){
-				horizontalOneFree[i] = Integer.MAX_VALUE;
-			}
-			else{
-				horizontalOneFree[i] = 2 * (i + 1);
-			}
-		}
-		
-		int[] horizontalTwoFree = new int[winNumber];
-		for (int i = 0; i < horizontalTwoFree.length; i++){
-			if (i == (horizontalTwoFree.length - 1)){
-				horizontalTwoFree[i] = Integer.MAX_VALUE;
-			}
-			else{
-				horizontalTwoFree[i] = 3 * (i + 1);
-			}
-		}
-		
-		
-		//check vertically with free space on top
-		for (int j = 0; j < state.columns; j++){
-			int continuous1 = 0;
-			int continuous2 = 0;
-			for (int i = 0; i < state.rows; i++){
-				if (state.boardMatrix[i][j] == 0){
-					if (continuous1 > 0){
-						utility += verticalWeight[continuous1 - 1];
-					}
-					if (continuous2 > 0){
-						utility -= verticalWeight[continuous2 - 1];
-					}
-					break;
-				}
-				if (state.boardMatrix[i][j] == 1){
-					continuous2 = 0;
-					continuous1 += 1;
-				}
-				if (state.boardMatrix[i][j] == 2){
-					continuous1 = 0;
-					continuous2 += 1;
-				}
-			}
-		}
-		
-		//check horizontally
-		for (int i = 0; i < state.rows; i++){
-			int continuous1 = 0;
-			int continuous2 = 0;
-			for (int j = 0; j < state.columns; j++){
-				if (state.boardMatrix[i][j] == 1){
-					continuous2 = 0;
-					continuous1 += 1;
-					while (j < (state.columns - 1) && state.boardMatrix[i][j+1] == 1){
-						continuous1 += 1;
-						j += 1;
-					}
-					if (j < state.columns - 1 && state.boardMatrix[i][j+1] == 0 && state.boardMatrix[i][j-continuous1] == 0){
-						utility += horizontalTwoFree[continuous1 - 1];
-					}
-					else if (j < state.columns - 1 && state.boardMatrix[i][j+1] == 0){
-						utility += horizontalOneFree[continuous1 -1];
-					}
-					else if (state.boardMatrix[i][j-continuous1] == 0){
-						utility += horizontalOneFree[continuous1 -1];
-					}
-				}
-				else if (state.boardMatrix[i][j] == 2){
-					continuous1 = 0;
-					continuous2 += 1;
-					while (j < (state.columns - 1) && state.boardMatrix[i][j+1] == 1){
-						continuous2 += 1;
-						j += 1;
-					}
-					if (j < state.columns - 1 && state.boardMatrix[i][j+1] == 0 && state.boardMatrix[i][j-continuous2] == 0){
-						utility -= horizontalTwoFree[continuous2 - 1];
-					}
-					else if (j < state.columns - 1 && state.boardMatrix[i][j+1] == 0){
-						utility -= horizontalOneFree[continuous2 -1];
-					}
-					else if (state.boardMatrix[i][j-continuous2] == 0){
-						utility -= horizontalOneFree[continuous2 -1];
-					}
-				}
-			}
-		}
-		
-		
-		//check diagonally
-		for(int i = winNumber - 1; i < state.rows; i++){
-			ArrayList<Integer> list = new ArrayList<>();
-			int rowsBelow = 0;
-			int columnIndex = 0;
-			while(i - rowsBelow >= 0){
-				list.add(state.boardMatrix[i-rowsBelow][columnIndex]);
-				columnIndex++;
-				rowsBelow++;
-			}
-			//TODO
-		}
-		
-		return utility;
-	}
+	}*/
 	
 	private void pruneBadGuesses(ArrayList<Integer> branches, double aggressiveness)
 	{
