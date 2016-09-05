@@ -243,7 +243,7 @@ public class AIPlayer extends Player
 		return Math.abs((r.nextInt() * 100) % 100);
 	}
 	
-	//Undoes the last move made so we can recurse back up the minimax tree 
+	//Undoes the last move made so we can recurse back up the minimax tree
 	/*private void undoMove(StateTree state, Move move)
 	{
 		if(move.pop)
@@ -273,26 +273,4 @@ public class AIPlayer extends Player
 			}
 		}
 	}*/
-	
-	private void pruneBadGuesses(ArrayList<Integer> branches, double aggressiveness)
-	{
-		aggressiveness = Math.max(0, Math.min(1,  aggressiveness));
-		ArrayList<Integer> sorted = new ArrayList<Integer>(branches);
-		Collections.sort(sorted);
-		
-		int size = sorted.size();
-		int cutoffIndex = (int)Math.round(aggressiveness * (size - 1));
-		int cutoff = branches.get(cutoffIndex);
-		int count = 0;
-		for (int i=0; i<branches.size(); i++)
-		{
-			if (branches.get(i) < cutoff)
-			{
-				count++;
-				branches.set(i, Integer.MIN_VALUE);
-			}
-		}
-		
-		System.out.println("pruned " + count + " guesses");
-	}
 }
